@@ -42,6 +42,18 @@ vim.keymap.set("n", "<leader>j", "<cmd>lprev<CR>zz")
 
 vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 vim.keymap.set("n", "<leader>x", "<cmd>!chmod +x %<CR>", { silent = true })
+vim.keymap.set("n", "<leader><leader>n","<cmd>bnext<CR>");
+vim.keymap.set("n", "<leader><leader>p","<cmd>bprev<CR>");
+
+
+
+vim.keymap.set('n', '<Tab>h', ':tabprevious<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<Tab>l', ':tabnext<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<Tab>n', ':tab split<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<Leader>1', ':Ex<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<Leader>w', ':tabclose<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<Leader>t', ':tabnew | terminal<CR>', { noremap = true, silent = true })
+
 
 vim.keymap.set(
     "n",
@@ -62,10 +74,6 @@ vim.keymap.set(
 )
 
 
-vim.keymap.set("n", "<leader>vpp", "<cmd>e ~/.dotfiles/nvim/.config/nvim/lua/theprimeagen/packer.lua<CR>");
 vim.keymap.set("n", "<leader>mr", "<cmd>CellularAutomaton make_it_rain<CR>");
 
-vim.keymap.set("n", "<leader><leader>", function()
-    vim.cmd("so")
-end)
 

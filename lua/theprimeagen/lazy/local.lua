@@ -52,5 +52,4 @@ local local_plugins = {
     },
 }
 
-return local_plugins
-
+return {}   -- rerturning empty table bc this plugins is not available for others use
