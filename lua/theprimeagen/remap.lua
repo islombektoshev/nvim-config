@@ -69,6 +69,13 @@ vim.keymap.set(
 
 vim.keymap.set(
     "n",
+    "<leader>is",
+    "oif !IdentSanity(xxxplace) {<CR>}<Esc>Oreturn fmt.Errorf(\"invalid identifier %s\", xxxplace)<Esc>/xxxplace<CR>"
+);
+
+
+vim.keymap.set(
+    "n",
     "<leader>el",
     "oif err != nil {<CR>}<Esc>O.logger.Error(\"error\", \"error\", err)<Esc>F.;i"
 )

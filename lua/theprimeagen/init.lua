@@ -1,6 +1,7 @@
 require("theprimeagen.set")
 require("theprimeagen.remap")
 require("theprimeagen.lazy_init")
+require("theprimeagen.snippets")
 
 -- DO.not
 -- DO NOT INCLUDE THIS
@@ -40,7 +41,7 @@ autocmd('TextYankPost', {
     end,
 })
 
-autocmd({"BufWritePre"}, {
+autocmd({ "BufWritePre" }, {
     group = ThePrimeagenGroup,
     pattern = "*",
     command = [[%s/\s\+$//e]],
@@ -49,11 +50,13 @@ autocmd({"BufWritePre"}, {
 autocmd('BufEnter', {
     group = ThePrimeagenGroup,
     callback = function()
-        if vim.bo.filetype == "zig" then
-            vim.cmd.colorscheme("tokyonight-night")
-        else
-            vim.cmd.colorscheme("rose-pine-moon")
-        end
+        vim.cmd.colorscheme("retrobox")
+
+        -- if vim.bo.filetype == "zig" then
+        --     vim.cmd.colorscheme("tokyonight-night")
+        -- else
+        --     vim.cmd.colorscheme("rose-pine-moon")
+        -- end
     end
 })
 
@@ -63,6 +66,7 @@ autocmd('LspAttach', {
     callback = function(e)
         local opts = { buffer = e.buf }
         vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
+        vim.keymap.set("n", "gi", function() vim.lsp.buf.implementation() end, opts)
         vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
         vim.keymap.set("n", "<leader>vws", function() vim.lsp.buf.workspace_symbol() end, opts)
         vim.keymap.set("n", "<leader>vd", function() vim.diagnostic.open_float() end, opts)
