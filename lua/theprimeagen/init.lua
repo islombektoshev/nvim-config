@@ -2,6 +2,8 @@ require("theprimeagen.set")
 require("theprimeagen.remap")
 require("theprimeagen.lazy_init")
 require("theprimeagen.snippets")
+require('nvim-autopairs').setup {}
+
 
 -- DO.not
 -- DO NOT INCLUDE THIS
@@ -50,8 +52,6 @@ autocmd({ "BufWritePre" }, {
 autocmd('BufEnter', {
     group = ThePrimeagenGroup,
     callback = function()
-        vim.cmd.colorscheme("retrobox")
-
         -- if vim.bo.filetype == "zig" then
         --     vim.cmd.colorscheme("tokyonight-night")
         -- else
@@ -79,6 +79,24 @@ autocmd('LspAttach', {
     end
 })
 
+autocmd("FileType", {
+    pattern = { "yaml", "python" },
+    callback = function()
+        vim.opt_local.list = true
+        vim.opt_local.listchars = { space = "·", tab = "»·" }
+    end,
+})
+autocmd("FileType", {
+    pattern = { "md", "markdown" },
+    callback = function()
+        vim.opt_local.colorcolumn = '100'
+    end,
+})
+
 vim.g.netrw_browse_split = 0
 vim.g.netrw_banner = 0
 vim.g.netrw_winsize = 25
+vim.cmd.colorscheme('tokyonight-moon')
+-- vim.cmd.colorscheme('retrobox')
+--
+vim.lsp.config('gopls', { cmd = { 'gopls' } })

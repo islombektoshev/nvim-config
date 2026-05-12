@@ -1,6 +1,6 @@
 return {
     {
-            "nvim-neotest/nvim-nio",
+        "nvim-neotest/nvim-nio",
     },
     {
         "nvim-neotest/neotest",
@@ -31,4 +31,3 @@ return {
         end,
     },
 }
-
