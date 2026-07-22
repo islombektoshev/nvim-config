@@ -100,3 +100,16 @@ vim.cmd.colorscheme('tokyonight-moon')
 -- vim.cmd.colorscheme('retrobox')
 --
 vim.lsp.config('gopls', { cmd = { 'gopls' } })
+
+vim.opt.runtimepath:prepend("/Users/islombek/Projects/experimental/lua/line-comment.nvim")
+
+vim.lsp.config("ts_ls", {
+    filetypes = {
+        "javascript",
+        "javascriptreact",
+        "javascript.jsx",
+        "typescript",
+        "typescriptreact",
+        "typescript.tsx"
+    },
+})

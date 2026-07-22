@@ -9,13 +9,18 @@ return {
         local cwd = vim.uv.cwd()
         local basename = vim.fs.basename(cwd)
         _99.setup({
-            model = 'opencode/big-pickle',
-            -- provider = _99.ClaudeCodeProvider,  -- default: OpenCodeProvider
+            provider = _99.Providers.ClaudeCodeProvider, -- default: OpenCodeProvider
             logger = {
                 level = _99.DEBUG,
                 path = "/tmp/" .. basename .. ".99.debug",
                 print_on_error = true,
             },
+            -- When setting this to something that is not inside the CWD tools
+            -- such as claude code or opencode will have permission issues
+            -- and generation will fail refer to tool documentation to resolve
+            -- https://opencode.ai/docs/permissions/#external-directories
+            -- https://code.claude.com/docs/en/permissions#read-and-edit
+            tmp_dir = "./tmp",
 
             --- Completions: #rules and @files in the prompt buffer
             completion = {
@@ -48,10 +53,13 @@ return {
                     -- max_files = 5000,            -- cap on total discovered files
                     -- exclude = { ".env", ".env.*", "node_modules", ".git", ... },
                 },
+                --- File Discovery:
+                --- - In git repos: Uses `git ls-files` which automatically respects .gitignore
+                --- - Non-git repos: Falls back to filesystem scanning with manual excludes
+                --- - Both methods apply the configured `exclude` list on top of gitignore
 
-                --- What autocomplete do you use.  We currently only
-                --- support cmp right now
-                source = "cmp",
+                --- What autocomplete engine to use. Defaults to native (built-in) if not specified.
+                source = "native", -- "native" (default), "cmp", or "blink"
             },
 
             --- WARNING: if you change cwd then this is likely broken
@@ -65,6 +73,7 @@ return {
             --- assuming that /foo is project root (based on cwd)
             md_files = {
                 "AGENT.md",
+                "CLAUDE.md",
             },
         })
 
@@ -80,8 +89,12 @@ return {
         end)
 
         --- if you have a request you dont want to make any changes, just cancel it
-        vim.keymap.set("v", "<leader>9s", function()
+        vim.keymap.set("n", "<leader>9x", function()
             _99.stop_all_requests()
+        end)
+
+        vim.keymap.set("n", "<leader>9s", function()
+            _99.search()
         end)
     end,
 }

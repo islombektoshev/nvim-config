@@ -85,4 +85,12 @@ vim.keymap.set("n", "<leader>mr", "<cmd>CellularAutomaton make_it_rain<CR>");
 
 
 vim.keymap.set("n", "<leader>L", "<cmd>wa<CR><cmd>make lint<CR>")
-vim.keymap.set("n", "<leader>r", "<cmd>wa<CR><cmd>make run<CR>")
+vim.keymap.set("n", "<leader>r", function()
+    vim.cmd("wa")
+    local f = vim.fn.findfile("nvim_run.lua", ".;")
+    if f ~= "" then
+        dofile(vim.fn.fnamemodify(f, ":p"))
+    else
+        vim.cmd("make run")
+    end
+end)
