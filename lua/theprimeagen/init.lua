@@ -43,6 +43,10 @@ autocmd('TextYankPost', {
     end,
 })
 
+vim.api.nvim_create_user_command("LspLog", function()
+    local fname = vim.lsp.log.get_filename()
+    vim.cmd.edit(fname)
+end, {})
 autocmd({ "BufWritePre" }, {
     group = ThePrimeagenGroup,
     pattern = "*",
@@ -74,8 +78,10 @@ autocmd('LspAttach', {
         vim.keymap.set("n", "<leader>vrr", function() vim.lsp.buf.references() end, opts)
         vim.keymap.set("n", "<leader>vrn", function() vim.lsp.buf.rename() end, opts)
         vim.keymap.set("i", "<C-h>", function() vim.lsp.buf.signature_help() end, opts)
-        vim.keymap.set("n", "[d", function() vim.diagnostic.goto_next() end, opts)
-        vim.keymap.set("n", "]d", function() vim.diagnostic.goto_prev() end, opts)
+        vim.keymap.set("n", "[d", function() vim.diagnostic.jump({ count = 1, on_jump = vim.diagnostic.open_float }) end,
+            opts)
+        vim.keymap.set("n", "]d", function() vim.diagnostic.jump({ count = -1, on_jump = vim.diagnostic.open_float }) end,
+            opts)
     end
 })
 
@@ -103,13 +109,3 @@ vim.lsp.config('gopls', { cmd = { 'gopls' } })
 
 vim.opt.runtimepath:prepend("/Users/islombek/Projects/experimental/lua/line-comment.nvim")
 
-vim.lsp.config("ts_ls", {
-    filetypes = {
-        "javascript",
-        "javascriptreact",
-        "javascript.jsx",
-        "typescript",
-        "typescriptreact",
-        "typescript.tsx"
-    },
-})

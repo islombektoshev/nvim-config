@@ -24,8 +24,9 @@ return {
 
         require("fidget").setup({})
         require("mason").setup()
+
         require("mason-lspconfig").setup({
-            ensure_installed = { "lua_ls", "superhtml", "gopls" },
+            ensure_installed = { "lua_ls", "superhtml", "gopls", "ts_ls", "vtsls" },
             automatic_enable = false,
         })
 
@@ -44,12 +45,30 @@ return {
             },
         })
 
+        vim.lsp.config('php_lsp', {
+            cmd = { 'php-lsp' },
+            filetypes = { 'php' },
+            root_markers = { 'composer.json', '.git' },
+            cmd_env = { RUST_LOG = 'php_lsp=debug' },
+            includePaths = {
+                'framework',
+                'protected/vendor',
+                'protected/vendors',
+            },
+            stubDirs = { 'framework' },
+            init_options = {
+                phpVersion = '7.4',
+                excludePaths = { 'vendor/*', 'assets/*', 'protected/runtime/*' },
+            },
+        })
+        vim.lsp.enable('php_lsp')
+
         vim.lsp.config("zls", {
             settings = { zls = { enable_inlay_hints = true, enable_snippets = true, warn_style = true } },
         })
         vim.g.zig_fmt_autosave = 0
 
-        vim.lsp.enable({ "lua_ls", "rust_analyzer", "gopls", "zls" })
+        vim.lsp.enable({ "lua_ls", "rust_analyzer", "gopls", "zls", "superhtml", "ols", "vtsls", "cssls", "jdtls" })
 
         local cmp_select = { behavior = cmp.SelectBehavior.Select }
 
