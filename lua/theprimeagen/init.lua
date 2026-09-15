@@ -109,3 +109,102 @@ vim.lsp.config('gopls', { cmd = { 'gopls' } })
 
 vim.opt.runtimepath:prepend("/Users/islombek/Projects/experimental/lua/line-comment.nvim")
 
+local function only_child(path)
+    local h = vim.uv.fs_scandir(path)
+    if not h then return nil end
+    local name, typ = vim.uv.fs_scandir_next(h)
+    if not name or typ ~= 'directory' then return nil end
+    if vim.uv.fs_scandir_next(h) then return nil end
+    return name
+end
+
+local function chain(path, name)
+    local rel, p = name, path
+    local child = only_child(p)
+    while child do
+        p, rel = p .. '/' .. child, rel .. '/' .. child
+        child = only_child(p)
+    end
+    return (rel ~= name) and rel or false
+end
+
+local runs = 0 -- debug counter
+
+local function add_groups(buf)
+    if not vim.api.nvim_buf_is_valid(buf) then return end
+    local dir = vim.b[buf].netrw_curdir
+    if not dir then return end
+
+    -- same folder + same content as last time? skip
+    local key = dir .. ':' .. vim.api.nvim_buf_get_changedtick(buf)
+    if vim.b[buf].groups_key == key then return end
+    runs = runs + 1
+
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local changed = false
+
+    for i = #lines, 1, -1 do
+        local name = lines[i]:match('^([^/"]+)/$')
+        if name and name ~= '.' and name ~= '..' then
+            local rel = chain(dir .. '/' .. name, name)
+            if rel and lines[i + 1] ~= rel .. '/' then
+                if not changed then
+                    vim.bo[buf].readonly = false
+                    vim.bo[buf].modifiable = true
+                    changed = true
+                end
+                vim.api.nvim_buf_set_lines(buf, i, i, false, { rel .. '/' })
+            end
+        end
+    end
+
+    if changed then
+        vim.bo[buf].modifiable = false
+        vim.bo[buf].modified = false
+        vim.bo[buf].readonly = true
+    end
+
+    -- save key AFTER our edits (inserts change the tick)
+    vim.b[buf].groups_key = dir .. ':' .. vim.api.nvim_buf_get_changedtick(buf)
+end
+
+local timers = {}
+
+local function debounce(buf)
+    local t = timers[buf]
+    if t then
+        t:stop()
+    else
+        t = vim.uv.new_timer()
+        timers[buf] = t
+    end
+    t:start(30, 0, vim.schedule_wrap(function() add_groups(buf) end))
+end
+
+vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'netrw',
+    callback = function(ev)
+        debounce(ev.buf)
+
+        if vim.b[ev.buf].groups_map then return end
+        vim.b[ev.buf].groups_map = true
+        vim.keymap.set('n', '<CR>', function()
+            local line = vim.api.nvim_get_current_line()
+            if line:match('^[^"].*/.+/$') then
+                local path = vim.b.netrw_curdir .. '/' .. line
+                return '<Cmd>Explore ' .. vim.fn.fnameescape(path) .. '<CR>'
+            end
+            return '<Plug>NetrwLocalBrowseCheck'
+        end, { buffer = ev.buf, expr = true, remap = true })
+    end,
+})
+
+-- free timer when buffer is gone
+vim.api.nvim_create_autocmd('BufWipeout', {
+    callback = function(ev)
+        local t = timers[ev.buf]
+        if t then t:close(); timers[ev.buf] = nil end
+    end,
+})
+
+vim.api.nvim_create_user_command('NetrwGroupsRuns', function() print(runs) end, {})

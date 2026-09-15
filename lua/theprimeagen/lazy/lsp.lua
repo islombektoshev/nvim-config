@@ -45,6 +45,19 @@ return {
             },
         })
 
+        vim.lsp.config('jdtls', {
+            flags = { debounce_text_changes = 200 },
+            settings = {
+                java = {
+                    autobuild = { enabled = false },
+                    referencesCodeLens = { enabled = false },
+                    implementationsCodeLens = { enabled = false },
+                    contentProvider = { preferred = 'fernflower' },
+                    maven = { downloadSources = true },
+                    eclipse = { downloadSources = true },
+                },
+            },
+        })
         vim.lsp.config('php_lsp', {
             cmd = { 'php-lsp' },
             filetypes = { 'php' },
@@ -68,7 +81,6 @@ return {
         })
         vim.g.zig_fmt_autosave = 0
 
-        vim.lsp.enable({ "lua_ls", "rust_analyzer", "gopls", "zls", "superhtml", "ols", "vtsls", "cssls", "jdtls" })
 
         local cmp_select = { behavior = cmp.SelectBehavior.Select }
 
@@ -104,5 +116,7 @@ return {
                 prefix = "",
             },
         })
+
+        vim.lsp.enable({ "lua_ls", "rust_analyzer", "gopls", "zls", "superhtml", "ols", "vtsls", "cssls", "jdtls" })
     end
 }
