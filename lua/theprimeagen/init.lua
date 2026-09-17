@@ -102,13 +102,18 @@ autocmd("FileType", {
 vim.g.netrw_browse_split = 0
 vim.g.netrw_banner = 0
 vim.g.netrw_winsize = 25
-vim.cmd.colorscheme('tokyonight-moon')
--- vim.cmd.colorscheme('retrobox')
+-- vim.cmd.colorscheme('tokyonight-moon')
+vim.cmd.colorscheme('retrobox')
 --
 vim.lsp.config('gopls', { cmd = { 'gopls' } })
 
 vim.opt.runtimepath:prepend("/Users/islombek/Projects/experimental/lua/line-comment.nvim")
+vim.opt.errorformat = "%E%f:%l: error: %m,%W%f:%l: warning: %m,%-G%.%#"
 
+--
+-- Explore optimzaiton code here
+--
+-- name of the only child folder, or nil
 local function only_child(path)
     local h = vim.uv.fs_scandir(path)
     if not h then return nil end
@@ -118,6 +123,7 @@ local function only_child(path)
     return name
 end
 
+-- "bin" → "bin/generated-sources/annotations", or false
 local function chain(path, name)
     local rel, p = name, path
     local child = only_child(p)
@@ -128,33 +134,50 @@ local function chain(path, name)
     return (rel ~= name) and rel or false
 end
 
-local runs = 0 -- debug counter
-
-local function add_groups(buf)
-    if not vim.api.nvim_buf_is_valid(buf) then return end
+local function add_groups(win)
+    if not vim.api.nvim_win_is_valid(win) then return end
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype ~= 'netrw' then return end
     local dir = vim.b[buf].netrw_curdir
     if not dir then return end
 
-    -- same folder + same content as last time? skip
-    local key = dir .. ':' .. vim.api.nvim_buf_get_changedtick(buf)
-    if vim.b[buf].groups_key == key then return end
-    runs = runs + 1
+    -- skip if this window already processed this exact content
+    local key = buf .. ':' .. dir .. ':' .. vim.api.nvim_buf_get_changedtick(buf)
+    if vim.w[win].groups_key == key then return end
 
     local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
     local changed = false
+    local function unlock()
+        if changed then return end
+        vim.bo[buf].readonly = false
+        vim.bo[buf].modifiable = true
+        changed = true
+    end
 
+    -- forward groups (bottom-up)
+    local up_idx
     for i = #lines, 1, -1 do
+        if lines[i] == '../' then up_idx = i end
         local name = lines[i]:match('^([^/"]+)/$')
         if name and name ~= '.' and name ~= '..' then
             local rel = chain(dir .. '/' .. name, name)
             if rel and lines[i + 1] ~= rel .. '/' then
-                if not changed then
-                    vim.bo[buf].readonly = false
-                    vim.bo[buf].modifiable = true
-                    changed = true
-                end
+                unlock()
                 vim.api.nvim_buf_set_lines(buf, i, i, false, { rel .. '/' })
             end
+        end
+    end
+
+    -- backlink: climb while parent holds only one folder
+    if up_idx then
+        local up, p = '..', vim.fs.dirname(dir)
+        while p ~= '/' and only_child(p) do
+            p = vim.fs.dirname(p)
+            up = up .. '/..'
+        end
+        if up ~= '..' and lines[up_idx + 1] ~= up .. '/' then
+            unlock()
+            vim.api.nvim_buf_set_lines(buf, up_idx, up_idx, false, { up .. '/' })
         end
     end
 
@@ -164,34 +187,34 @@ local function add_groups(buf)
         vim.bo[buf].readonly = true
     end
 
-    -- save key AFTER our edits (inserts change the tick)
-    vim.b[buf].groups_key = dir .. ':' .. vim.api.nvim_buf_get_changedtick(buf)
+    vim.w[win].groups_key = buf .. ':' .. dir .. ':' .. vim.api.nvim_buf_get_changedtick(buf)
 end
 
-local timers = {}
+local timers = {} -- window id → timer
 
-local function debounce(buf)
-    local t = timers[buf]
+local function debounce(win)
+    local t = timers[win]
     if t then
         t:stop()
     else
         t = vim.uv.new_timer()
-        timers[buf] = t
+        timers[win] = t
     end
-    t:start(30, 0, vim.schedule_wrap(function() add_groups(buf) end))
+    t:start(30, 0, vim.schedule_wrap(function() add_groups(win) end))
 end
 
 vim.api.nvim_create_autocmd('FileType', {
     pattern = 'netrw',
     callback = function(ev)
-        debounce(ev.buf)
+        debounce(vim.api.nvim_get_current_win())
 
+        -- keymaps are buffer-local, so this flag stays on the buffer
         if vim.b[ev.buf].groups_map then return end
         vim.b[ev.buf].groups_map = true
         vim.keymap.set('n', '<CR>', function()
             local line = vim.api.nvim_get_current_line()
             if line:match('^[^"].*/.+/$') then
-                local path = vim.b.netrw_curdir .. '/' .. line
+                local path = vim.fn.simplify(vim.b.netrw_curdir .. '/' .. line)
                 return '<Cmd>Explore ' .. vim.fn.fnameescape(path) .. '<CR>'
             end
             return '<Plug>NetrwLocalBrowseCheck'
@@ -199,12 +222,13 @@ vim.api.nvim_create_autocmd('FileType', {
     end,
 })
 
--- free timer when buffer is gone
-vim.api.nvim_create_autocmd('BufWipeout', {
+-- free timer when window closes
+vim.api.nvim_create_autocmd('WinClosed', {
     callback = function(ev)
-        local t = timers[ev.buf]
-        if t then t:close(); timers[ev.buf] = nil end
+        local win = tonumber(ev.match)
+        local t = timers[win]
+        if t then
+            t:close(); timers[win] = nil
+        end
     end,
 })
-
-vim.api.nvim_create_user_command('NetrwGroupsRuns', function() print(runs) end, {})

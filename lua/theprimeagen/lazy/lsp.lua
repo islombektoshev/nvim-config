@@ -47,6 +47,7 @@ return {
 
         vim.lsp.config('jdtls', {
             flags = { debounce_text_changes = 200 },
+            root_markers = { '.git', 'gradlew'},
             settings = {
                 java = {
                     autobuild = { enabled = false },
@@ -117,6 +118,17 @@ return {
             },
         })
 
-        vim.lsp.enable({ "lua_ls", "rust_analyzer", "gopls", "zls", "superhtml", "ols", "vtsls", "cssls", "jdtls" })
+        vim.lsp.enable({
+            "lua_ls",
+            "rust_analyzer",
+            "gopls",
+            "zls",
+            "superhtml",
+            "ols",
+            "vtsls",
+            "cssls",
+            "jdtls",
+            "groovyls",
+        })
     end
 }
