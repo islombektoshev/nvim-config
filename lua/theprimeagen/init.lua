@@ -2,6 +2,7 @@ require("theprimeagen.set")
 require("theprimeagen.remap")
 require("theprimeagen.lazy_init")
 require("theprimeagen.snippets")
+require("theprimeagen.jdtls")
 require('nvim-autopairs').setup {}
 
 
@@ -103,7 +104,7 @@ vim.g.netrw_browse_split = 0
 vim.g.netrw_banner = 0
 vim.g.netrw_winsize = 25
 -- vim.cmd.colorscheme('tokyonight-moon')
-vim.cmd.colorscheme('retrobox')
+vim.cmd.colorscheme('monokai-pro-classic')
 --
 vim.lsp.config('gopls', { cmd = { 'gopls' } })
 

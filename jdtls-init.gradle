@@ -1,0 +1,13 @@
+// jdtls / buildship: put Eclipse compiler output under build/ (gitignored) instead of bin/
+allprojects {
+    plugins.withId('eclipse') {
+        eclipse.classpath {
+            defaultOutputDir = file('build/eclipse/default')
+            file.whenMerged { cp ->
+                cp.entries.findAll { it.kind == 'src' && it.output != null }.each {
+                    it.output = it.output.replaceFirst(/^bin\//, 'build/eclipse/')
+                }
+            }
+        }
+    }
+}

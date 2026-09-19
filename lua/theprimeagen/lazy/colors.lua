@@ -10,6 +10,11 @@ return {
     {
         "erikbackman/brightburn.vim",
     },
+    { "Mofiqul/dracula.nvim", },
+    { "navarasu/onedark.nvim", },
+    { "oxfist/night-owl.nvim", },
+    { "tanvirtin/monokai.nvim", },
+    { "loctvl842/monokai-pro.nvim", },
 
     {
         "folke/tokyonight.nvim",
