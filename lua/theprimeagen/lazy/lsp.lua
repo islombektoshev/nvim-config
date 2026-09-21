@@ -47,7 +47,7 @@ return {
 
         vim.lsp.config('jdtls', {
             flags = { debounce_text_changes = 200 },
-            root_markers = { '.git', 'gradlew'},
+            root_markers = { '.git', 'gradlew' },
             settings = {
                 java = {
                     autobuild = { enabled = false },
