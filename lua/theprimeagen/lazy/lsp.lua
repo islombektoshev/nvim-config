@@ -45,11 +45,34 @@ return {
             },
         })
 
+        -- nvim-lspconfig and nvim-jdtls both ship lsp/jdtls.lua with a different
+        -- `cmd`; pin ours so the merge order does not matter. `-data` formula is
+        -- shared with theprimeagen/jdtls.lua (:JdtlsNuke).
+        local function jdtls_cmd(dispatchers, config)
+            local data = vim.fn.stdpath('cache') .. '/jdtls/workspace/'
+                .. vim.fn.fnamemodify(config.root_dir or vim.fn.getcwd(), ':p:h:t')
+            return vim.lsp.rpc.start({ 'jdtls', '-data', data }, dispatchers)
+        end
+        -- java-debug / vscode-java-test from mason, loaded into jdtls for nvim-dap
+        local mason = vim.fn.stdpath('data') .. '/mason/packages'
+        local bundles = vim.fn.glob(mason .. '/java-debug-adapter/extension/server/com.microsoft.java.debug.plugin-*.jar', true, true)
+        for _, jar in ipairs(vim.fn.glob(mason .. '/java-test/extension/server/*.jar', true, true)) do
+            -- not OSGi bundles; jdtls errors when asked to load them
+            if not jar:find('jacoco') and not jar:find('with%-dependencies') then
+                bundles[#bundles + 1] = jar
+            end
+        end
+
         vim.lsp.config('jdtls', {
+            cmd = jdtls_cmd,
             flags = { debounce_text_changes = 200 },
             root_markers = { '.git', 'gradlew' },
-            -- without this jdtls returns no location for classes inside jars
-            init_options = { extendedClientCapabilities = { classFileContentsSupport = true } },
+            init_options = {
+                -- without this jdtls returns no location for classes inside jars
+                -- (nvim-jdtls adds the full set; kept so it works without the plugin)
+                extendedClientCapabilities = { classFileContentsSupport = true },
+                bundles = bundles,
+            },
             settings = {
                 java = {
                     autobuild = { enabled = false },
@@ -67,6 +90,8 @@ return {
         vim.api.nvim_create_autocmd('BufReadCmd', {
             pattern = 'jdt://*',
             callback = function(ev)
+                -- nvim-jdtls registers the same BufReadCmd; let it win when loaded
+                if vim.g.nvim_jdtls then return end
                 local client = vim.lsp.get_clients({ name = 'jdtls' })[1]
                 if not client then
                     vim.notify('jdtls not running, cannot open ' .. ev.match, vim.log.levels.WARN)
