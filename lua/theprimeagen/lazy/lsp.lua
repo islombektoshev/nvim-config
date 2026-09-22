@@ -48,6 +48,8 @@ return {
         vim.lsp.config('jdtls', {
             flags = { debounce_text_changes = 200 },
             root_markers = { '.git', 'gradlew' },
+            -- without this jdtls returns no location for classes inside jars
+            init_options = { extendedClientCapabilities = { classFileContentsSupport = true } },
             settings = {
                 java = {
                     autobuild = { enabled = false },
@@ -58,6 +60,43 @@ return {
                     eclipse = { downloadSources = true },
                 },
             },
+        })
+
+        -- jdtls returns jdt:// URIs for classes inside jars. Neovim can't read that
+        -- scheme, so fetch the (decompiled) source via java/classFileContents.
+        vim.api.nvim_create_autocmd('BufReadCmd', {
+            pattern = 'jdt://*',
+            callback = function(ev)
+                local client = vim.lsp.get_clients({ name = 'jdtls' })[1]
+                if not client then
+                    vim.notify('jdtls not running, cannot open ' .. ev.match, vim.log.levels.WARN)
+                    return
+                end
+                local buf = ev.buf
+                vim.bo[buf].modifiable = true
+                vim.bo[buf].swapfile = false
+                vim.bo[buf].buftype = 'nofile'
+                vim.bo[buf].filetype = 'java'
+                local done = false
+                client:request('java/classFileContents', { uri = ev.match }, function(err, content)
+                    done = true
+                    if err or not content then
+                        vim.notify('classFileContents failed: ' .. vim.inspect(err), vim.log.levels.ERROR)
+                        return
+                    end
+                    if not vim.api.nvim_buf_is_valid(buf) then return end
+                    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(content, '\n', { plain = true }))
+                    vim.bo[buf].modifiable = false
+                    vim.bo[buf].modified = false
+                    -- attach so go-to-definition keeps working inside library code
+                    vim.lsp.buf_attach_client(buf, client.id)
+                end, buf)
+                -- block until content arrives: the jump sets the cursor right after
+                -- BufReadCmd returns, and an empty buffer would clamp it to line 1
+                if not vim.wait(5000, function() return done end) then
+                    vim.notify('timeout fetching ' .. ev.match, vim.log.levels.WARN)
+                end
+            end,
         })
         vim.lsp.config('php_lsp', {
             cmd = { 'php-lsp' },

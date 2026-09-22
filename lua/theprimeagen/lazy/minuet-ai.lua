@@ -13,6 +13,9 @@ return {
                 debounce = 400,  -- Increase to reduce costs and avoid rate limits
                 -- nvim-cmp stays for LSP/snippets only; AI goes through virtual text
                 cmp = { enable_auto_complete = false },
+                -- Trim completion tail that duplicates text after cursor (e.g. closing '}').
+                -- Default 15 is too high for single-char braces.
+                after_cursor_filter_length = 1,
                 virtualtext = {
                     auto_trigger_ft = { '*' },
                     keymap = {
