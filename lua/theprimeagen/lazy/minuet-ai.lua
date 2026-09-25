@@ -3,6 +3,60 @@ return {
         'milanglacier/minuet-ai.nvim',
         config = function()
             local minuet = require 'minuet'
+            local guard = require 'theprimeagen.minuet_guard'
+
+            -- Extra prompt context: the 10 most recently used files this session.
+            -- Costs extra input tokens per request; tune caps below.
+            local recent_files_max = 10
+            local recent_lines_per_file = 60
+            local recent_total_chars = 16000
+
+            local function recent_files_context()
+                local current = vim.api.nvim_get_current_buf()
+                local bufs = vim.fn.getbufinfo { buflisted = 1 }
+                table.sort(bufs, function(a, b)
+                    return a.lastused > b.lastused
+                end)
+
+                local chunks, total, count = {}, 0, 0
+                for _, buf in ipairs(bufs) do
+                    if count >= recent_files_max or total >= recent_total_chars then
+                        break
+                    end
+                    local ok = buf.bufnr ~= current
+                        and buf.name ~= ''
+                        and vim.bo[buf.bufnr].buftype == ''
+                        and vim.fn.filereadable(buf.name) == 1
+                        and guard.allowed(buf.name)
+                    if ok then
+                        local lines
+                        if buf.loaded == 1 then
+                            lines = vim.api.nvim_buf_get_lines(buf.bufnr, 0, recent_lines_per_file, false)
+                        else
+                            local read_ok, content = pcall(vim.fn.readfile, buf.name, '', recent_lines_per_file)
+                            lines = read_ok and content or {}
+                        end
+                        local text = table.concat(lines, '\n')
+                        if #text > 0 then
+                            local rel = vim.fn.fnamemodify(buf.name, ':.')
+                            table.insert(chunks, string.format('<file path="%s">\n%s\n</file>', rel, text))
+                            total = total + #text
+                            count = count + 1
+                        end
+                    end
+                end
+
+                if #chunks == 0 then
+                    return ''
+                end
+                return '<recentlyOpenedFiles>\n' .. table.concat(chunks, '\n') .. '\n</recentlyOpenedFiles>'
+            end
+
+            local chat_input = vim.deepcopy(require('minuet.config').default_chat_input_prefix_first)
+            chat_input.template = '{{{recent_files}}}\n' .. chat_input.template
+            chat_input.recent_files = function(_, _, _)
+                return recent_files_context()
+            end
 
             -- local api_key = vim.env.OPENROUTER_NEOVIM_AUTOCOMPLETE_KEY
             minuet.setup {
@@ -35,6 +89,7 @@ return {
                         model = 'mistralai/codestral-2508',
                         -- model='deepseek/deepseek-v4-flash',
                         name = 'Openrouter',
+                        chat_input = chat_input,
                         optional = {
                             max_tokens = 56,
                             top_p = 0.9,
@@ -48,6 +103,10 @@ return {
                     },
                 },
             }
+
+            -- After minuet.setup() so the guard's FileType autocmd runs after
+            -- minuet's own one and wins.
+            guard.setup()
 
             local vt = require('minuet.virtualtext').action
             vim.keymap.set('i', '<Tab>', function()

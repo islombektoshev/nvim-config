@@ -51,7 +51,9 @@ return {
         local function jdtls_cmd(dispatchers, config)
             local data = vim.fn.stdpath('cache') .. '/jdtls/workspace/'
                 .. vim.fn.fnamemodify(config.root_dir or vim.fn.getcwd(), ':p:h:t')
-            return vim.lsp.rpc.start({ 'jdtls', '-data', data }, dispatchers)
+            -- lombok as javaagent, else @AllArgsConstructor/@Getter members are unresolved
+            local lombok = vim.fn.stdpath('data') .. '/mason/packages/jdtls/lombok.jar'
+            return vim.lsp.rpc.start({ 'jdtls', '-data', data, '--jvm-arg=-javaagent:' .. lombok }, dispatchers)
         end
         -- java-debug / vscode-java-test from mason, loaded into jdtls for nvim-dap
         local mason = vim.fn.stdpath('data') .. '/mason/packages'
@@ -83,6 +85,20 @@ return {
                     eclipse = { downloadSources = true },
                 },
             },
+            -- Per-project Eclipse formatter profile. `settings` is evaluated once at
+            -- declaration, before any project is known, and before_init is too early:
+            -- the client copies settings before it runs. on_init sets them on the live
+            -- client and pushes them. Projects without the file keep jdtls defaults.
+            on_init = function(client)
+                local root = client.config.root_dir or vim.fn.getcwd()
+                local xml = root .. '/config/eclipse-format.xml'
+                if vim.fn.filereadable(xml) == 1 then
+                    client.settings = vim.tbl_deep_extend('force', client.settings or {}, {
+                        java = { format = { settings = { url = xml, profile = 'sd-erp' } } },
+                    })
+                    client:notify('workspace/didChangeConfiguration', { settings = client.settings })
+                end
+            end,
         })
 
         -- jdtls returns jdt:// URIs for classes inside jars. Neovim can't read that
@@ -193,6 +209,7 @@ return {
             "cssls",
             "jdtls",
             "groovyls",
+            "jsonls",
         })
     end
 }
