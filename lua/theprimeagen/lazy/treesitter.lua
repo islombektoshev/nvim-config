@@ -4,7 +4,7 @@ return {
     build = ":TSUpdate",
     config = function()
         require("nvim-treesitter").install({
-            "vimdoc", "javascript", "typescript", "c", "lua", "rust",
+            "vimdoc", "javascript", "typescript", "c", "cpp", "lua", "rust",
             "jsdoc", "bash", "go", "templ",
         })
 
